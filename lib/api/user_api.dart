@@ -5,7 +5,7 @@ import '../domain/usuario.dart';
 class UserApi {
   // URL da API fake - ajuste para seu repositório
   final String baseUrl =
-      'https://my-json-server.typicode.com/tarsisms/fake-api';
+      'https://my-json-server.typicode.com/yMScorpion/fake-api-respirabem';
 
   Future<List<Usuario>> getUsers() async {
     try {

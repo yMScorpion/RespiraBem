@@ -121,7 +121,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget buildQuickActionsGrid() {
-    return Column(
+    return const Column(
       children: [
         Row(
           children: [
@@ -129,35 +129,35 @@ class _HomePageState extends State<HomePage> {
               child: ActionCard(
                 title: 'Sintomas',
                 icon: Icons.health_and_safety,
-                color: const Color(0xFF27AE60),
+                color: Color(0xFF27AE60),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: ActionCard(
                 title: 'Medicamentos',
                 icon: Icons.medication,
-                color: const Color(0xFFE74C3C),
+                color: Color(0xFFE74C3C),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Row(
           children: [
             Expanded(
               child: ActionCard(
                 title: 'Dicas de Saúde',
                 icon: Icons.lightbulb,
-                color: const Color(0xFFF39C12),
+                color: Color(0xFFF39C12),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: ActionCard(
                 title: 'Consultas',
                 icon: Icons.calendar_today,
-                color: const Color(0xFF9B59B6),
+                color: Color(0xFF9B59B6),
               ),
             ),
           ],

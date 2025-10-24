@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../api/weather_api.dart';
 import '../api/user_api.dart';
 import '../domain/weather.dart';
-import '../domain/usuario.dart';
 import '../db/database_helper.dart';
 import 'home_page.dart';
 
@@ -103,7 +102,7 @@ class _LoginPageState extends State<LoginPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -196,13 +195,26 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget buildInfoText() {
     return const Center(
-      child: Text(
-        'Use: joao@gmail.com / 123456',
-        style: TextStyle(
-          fontSize: 12,
-          color: Color(0xFF7F8C8D),
-          fontStyle: FontStyle.italic,
-        ),
+      child: Column(
+        children: [
+          Text(
+            'Use qualquer email e senha para entrar',
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF7F8C8D),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Exemplo: joao@gmail.com / 123456',
+            style: TextStyle(
+              fontSize: 11,
+              color: Color(0xFF95A5A6),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -222,7 +234,7 @@ class _LoginPageState extends State<LoginPage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -251,7 +263,7 @@ class _LoginPageState extends State<LoginPage> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -332,13 +344,50 @@ class _LoginPageState extends State<LoginPage> {
             );
           }
         } else {
-          showMessage('Email ou senha incorretos');
+          // Se não encontrou na API, cria um usuário genérico
+          final db = DatabaseHelper();
+          await db.clearUsuarios();
+          await db.insertUsuario(
+            await db.getUsuario() ?? 
+            await _createDefaultUser(email),
+          );
+          
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomePage()),
+            );
+          }
         }
       } else {
-        showMessage('Email ou senha incorretos');
+        // Login offline - permite qualquer credencial
+        final db = DatabaseHelper();
+        await db.clearUsuarios();
+        await db.insertUsuario(await _createDefaultUser(email));
+        
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        }
       }
     } catch (e) {
-      showMessage('Erro ao fazer login: $e');
+      // Em caso de erro, permite login offline
+      try {
+        final db = DatabaseHelper();
+        await db.clearUsuarios();
+        await db.insertUsuario(await _createDefaultUser(email));
+        
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        }
+      } catch (dbError) {
+        showMessage('Erro ao fazer login: $dbError');
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -346,6 +395,18 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     }
+  }
+
+  Future<dynamic> _createDefaultUser(String email) async {
+    // Extrai o nome do email
+    final nome = email.split('@').first;
+    final nomeCapitalizado = nome[0].toUpperCase() + nome.substring(1);
+    
+    return {
+      'nome': nomeCapitalizado,
+      'email': email,
+      'cidade': 'Maceió'
+    };
   }
 
   void showMessage(String message) {
