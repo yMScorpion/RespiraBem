@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api/weather_api.dart';
 import '../api/user_api.dart';
 import '../domain/weather.dart';
+import '../domain/usuario.dart';
 import '../db/database_helper.dart';
 import 'home_page.dart';
 
@@ -45,7 +46,6 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 24),
                     buildLoginButton(),
                     const SizedBox(height: 16),
-                    buildInfoText(),
                   ],
                 ),
               ),
@@ -193,32 +193,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget buildInfoText() {
-    return const Center(
-      child: Column(
-        children: [
-          Text(
-            'Use qualquer email e senha para entrar',
-            style: TextStyle(
-              fontSize: 12,
-              color: Color(0xFF7F8C8D),
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            'Exemplo: joao@gmail.com / 123456',
-            style: TextStyle(
-              fontSize: 11,
-              color: Color(0xFF95A5A6),
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget buildWeatherWidget() {
     return Positioned(
       top: 16,
@@ -252,6 +226,7 @@ class _LoginPageState extends State<LoginPage> {
           }
 
           if (snapshot.hasError || !snapshot.hasData) {
+            // return Row(children: [Expanded(child: Text(  '${snapshot.error}'))]);
             return const SizedBox.shrink();
           }
 
@@ -313,7 +288,7 @@ class _LoginPageState extends State<LoginPage> {
     final senha = senhaController.text.trim();
 
     if (email.isEmpty || senha.isEmpty) {
-      showMessage('Por favor, preencha todos os campos');
+      showMessage('Por favor, preencha todos os campos', isError: true);
       return;
     }
 
@@ -322,71 +297,49 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // Tenta fazer login usando a API fake
       final userApi = UserApi();
-      final success = await userApi.login(email, senha);
 
-      if (success) {
-        // Busca dados completos do usuário
-        final usuario = await userApi.getUserByEmail(email);
+      // Tenta fazer login usando a API
+      final loginResult = await userApi.login(email, senha);
 
-        if (usuario != null && usuario.nome.isNotEmpty) {
-          // Salva usuário no banco local
-          final db = DatabaseHelper();
-          await db.clearUsuarios();
-          await db.insertUsuario(usuario);
-
-          // Navega para a home
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
-            );
-          }
-        } else {
-          // Se não encontrou na API, cria um usuário genérico
-          final db = DatabaseHelper();
-          await db.clearUsuarios();
-          await db.insertUsuario(
-            await db.getUsuario() ?? 
-            await _createDefaultUser(email),
-          );
-          
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
-            );
-          }
-        }
-      } else {
-        // Login offline - permite qualquer credencial
-        final db = DatabaseHelper();
-        await db.clearUsuarios();
-        await db.insertUsuario(await _createDefaultUser(email));
-        
+      if (!loginResult['success']) {
+        // Credenciais inválidas
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
-          );
+          showMessage(loginResult['message'], isError: true);
         }
+        return;
+      }
+
+      // Pega o usuário do resultado do login
+      final usuario = loginResult['user'] as Usuario?;
+
+      if (usuario == null || usuario.nome.isEmpty) {
+        // Usuário não encontrado
+        if (mounted) {
+          showMessage('Erro ao carregar dados do usuário.', isError: true);
+        }
+        return;
+      }
+
+      // Login bem-sucedido - salva usuário no banco local
+      final db = DatabaseHelper();
+      await db.clearUsuarios();
+      await db.insertUsuario(usuario);
+
+      // Navega para a home
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
       }
     } catch (e) {
-      // Em caso de erro, permite login offline
-      try {
-        final db = DatabaseHelper();
-        await db.clearUsuarios();
-        await db.insertUsuario(await _createDefaultUser(email));
-        
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
-          );
-        }
-      } catch (dbError) {
-        showMessage('Erro ao fazer login: $dbError');
+      // Erro ao conectar com a API
+      if (mounted) {
+        showMessage(
+          'Erro ao conectar com o servidor. Verifique sua conexão com a internet.',
+          isError: true,
+        );
       }
     } finally {
       if (mounted) {
@@ -397,25 +350,32 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<dynamic> _createDefaultUser(String email) async {
-    // Extrai o nome do email
-    final nome = email.split('@').first;
-    final nomeCapitalizado = nome[0].toUpperCase() + nome.substring(1);
-    
-    return {
-      'nome': nomeCapitalizado,
-      'email': email,
-      'cidade': 'Maceió'
-    };
-  }
-
-  void showMessage(String message) {
+  void showMessage(String message, {bool isError = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message),
-          backgroundColor: const Color(0xFFE74C3C),
+          content: Row(
+            children: [
+              Icon(
+                isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor:
+              isError ? const Color(0xFFE74C3C) : const Color(0xFF27AE60),
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }

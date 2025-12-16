@@ -2,12 +2,14 @@ class Usuario {
   int? id;
   String nome;
   String? email;
+  String? senha;
   String? cidade;
   
   Usuario({
     this.id, 
     required this.nome,
     this.email,
+    this.senha,
     this.cidade,
   });
   
@@ -31,8 +33,10 @@ class Usuario {
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
     return Usuario(
+      id: json['id'],
       nome: json['nome'] ?? json['name'] ?? '',
       email: json['email'] ?? '',
+      senha: json['senha'] ?? json['password'] ?? '',
       cidade: json['cidade'] ?? json['city'] ?? '',
     );
   }
